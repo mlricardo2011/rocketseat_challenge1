@@ -1,0 +1,41 @@
+
+ctrl+shift+p
+preferenes open keyboard json
+ctrl+shift+m runpythoninterminal
+era ctrl+F5...
+
+
+rocketseat
+@diana-holmer-hodara-0195
+dianahodara@gmail.com
+dianahh
+github
+dianahodara@gmail.com
+dianahh123581321
+
+
+git config --global user.name "Diana Hodara"
+git config --global user.email "dianahh@gmail.com"
+# (opção de privacidade: use seu e-mail noreply do GitHub:
+#  <ID>+<usuario>@users.noreply.github.com)
+
+# 2) Garanta que há um repositório git aqui
+git init
+
+# 3) Selecione os arquivos para o primeiro commit
+git add .
+
+# 4) Crie o primeiro commit (agora o Git já tem seu nome/e-mail)
+git commit -m "Primeiro commit - desafio Rocketseat"
+
+# 5) Renomeie a branch atual para main
+git branch -M main
+
+# 6) Aponte para o repositório remoto (se ainda não tiver origin)
+git remote add origin https://github.com/RHHodara/rocketseat_challenge1.git
+# (se der "origin already exists", use:)
+# git remote set-url origin https://github.com/RHHodara/rocketseat_challenge1.git
+
+git push -u origin main
+git remote -v
+git log --oneline --decorate --graph -n 3
