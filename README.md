@@ -11,6 +11,9 @@ py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
 ### 2) Instalar dependências
+As bibliotecas necessárias estão listadas no arquivo `requirements.txt`.  
+Instale todas de uma vez com:
+
 pip install -r requirements.txt
 
 ### 3) Executar scripts
