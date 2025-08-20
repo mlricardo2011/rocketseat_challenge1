@@ -10,68 +10,92 @@ socket.setdefaulttimeout(8)
 valid_urls = []
 url_base_pattern = ""
 
-def verificar_urls_reais(pattern, num_urls=5):
-    letras = string.ascii_lowercase
+def ensure_scheme(url: str) -> str:
+    """
+    Garante que a URL tenha esquema (https://) se o usuário não digitar.
+    Exemplo: 'www.site.com/*' -> 'https://www.site.com/*'
+    """
+    parsed = urllib.parse.urlparse(url)
+    return url if parsed.scheme else "https://" + url
+
+def verificar_urls_reais(pattern, num_urls=26):
+    """
+    Se o pattern for .../as*, gera .../asa .. .../asz (substitui * apenas por 'a'..'z').
+    Caso contrário, insere 'as' + letra no lugar do '*'.
+    Se não houver '*', concatena '/as' + letra.
+    """
+    import urllib.request, urllib.error, urllib.parse
+
+    # garante esquema e remove espaços invisíveis
+    base = urllib.parse.urlparse(pattern.strip())
+    url_base = pattern.strip()
+    if not base.scheme:
+        url_base = "https://" + url_base
+
     resultados = []
-    
-    for i in range(num_urls):
-        sufixo = ''.join([letras[(i // (26**j)) % 26] for j in reversed(range(3))])
-        url = pattern.replace("*", sufixo)
-        
+    has_wildcard = "*" in url_base
+    star_idx = url_base.find("*") if has_wildcard else -1
+    star_after_as = has_wildcard and star_idx >= 2 and url_base[star_idx-2:star_idx].lower() == "as"
+
+    count = 0
+    for c in range(ord('a'), ord('z') + 1):
+        letter = chr(c)
+
+        if has_wildcard:
+            # se já é as*, substitui só pela 3ª letra; senão, por 'as' + letra
+            replacement = letter if star_after_as else ("as" + letter)
+            url = url_base.replace("*", replacement, 1)
+        else:
+            # sem wildcard: concatena /as + letra
+            url = url_base.rstrip("/") + "/as" + letter
+
+            # garante barra no final
+        if not url.endswith("/"):
+            url += "/"
+
         try:
             headers = {
                 'User-Agent': 'Mozilla/5.0',
                 'Accept': 'text/html',
                 'Accept-Language': 'pt-BR,pt;q=0.9'
             }
-            
             req = urllib.request.Request(url, headers=headers)
-            
-            with urllib.request.urlopen(req) as response:
-                status_code = response.status
-                content_type = response.headers.get('Content-Type', '')
-                
-                if 'text/html' not in content_type:
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                status = getattr(resp, "status", resp.getcode())
+                ct = (resp.headers.get('Content-Type') or '').lower()
+
+                if 'text/html' not in ct and 'application/xhtml+xml' not in ct:
                     resultados.append({
-                        "url": url,
-                        "status": status_code,
-                        "html_content": f"Conteúdo não HTML: {content_type}",
-                        "headers": dict(response.headers),
-                        "status_kryptos": "❌"
+                        "url": url, "status": status,
+                        "html_content": f"Conteúdo não HTML: {ct}",
+                        "headers": dict(resp.headers), "status_kryptos": "❌"
                     })
-                    continue
-                
-                html_content = response.read().decode('utf-8', errors='replace')[:1000]
-                
-                is_valid_page = True
-                if any(palavra in html_content.lower() for palavra in ['404', 'não encontrada', 'error']):
-                    is_valid_page = False
-                
-                resultados.append({
-                    "url": url,
-                    "status": status_code,
-                    "html_content": html_content,
-                    "headers": dict(response.headers),
-                    "status_kryptos": "✅" if is_valid_page else "❌"
-                })
-                
+                else:
+                    html = resp.read(2048).decode('utf-8', errors='replace')
+                    looks_error = any(t in html.lower() for t in ["internal server error", "http 500", "status 500"])
+                    resultados.append({
+                        "url": url, "status": status, "html_content": html,
+                        "headers": dict(resp.headers),
+                        "status_kryptos": "✅" if (200 <= status < 300 and not looks_error) else "❌"
+                    })
+
         except urllib.error.HTTPError as e:
             resultados.append({
-                "url": url,
-                "status": e.code,
+                "url": url, "status": e.code,
                 "html_content": f"Erro HTTP: {e.reason}",
-                "headers": {},
-                "status_kryptos": "❌"
+                "headers": {}, "status_kryptos": "❌"
             })
         except Exception as e:
             resultados.append({
-                "url": url,
-                "status": 500,
-                "html_content": f"Erro: {str(e)}",
-                "headers": {},
-                "status_kryptos": "❌"
+                "url": url, "status": -999,
+                "html_content": f"Erro local: {type(e).__name__}: {e}",
+                "headers": {}, "status_kryptos": "❌"
             })
-    
+
+        count += 1
+        if count >= num_urls:
+            break
+
     return resultados
 
 def exibir_resultados():
@@ -103,7 +127,7 @@ def mostrar_lista_completa():
         print("  Headers:")
         for key, value in item['headers'].items():
             print(f"    {key}: {value}")
-        print(f"  HTML Content: {item['html_content'][:200]}...")  # Mostra apenas o início do conteúdo
+        print(f"  HTML Coab*ntent: {item['html_content'][:200]}...")  # Mostra apenas o início do conteúdo
         if 'decrypted_text' in item:
             print(f"  Decrypted: {item['decrypted_text']}")
     
@@ -175,7 +199,7 @@ def menu():
         op = input("Digite o número da opção: ").strip()
         
         if op == "1":
-            url_base_pattern = input("Digite a base da URL com * (ex: https://*.site.com): ").strip()
+            url_base_pattern = input("Digite a base da URL com * (ex: https://www.site.com.br/as*): ").strip()
         elif op == "2":
             if not url_base_pattern:
                 print("⚠️ Defina primeiro a base da URL (opção 1).")

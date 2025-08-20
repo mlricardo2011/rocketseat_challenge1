@@ -1190,7 +1190,7 @@ print(mensagem)  # Saída: Olá, Ricardo!
 resultado = meu_modulo.dobro(5); print(resultado)  # Saída: 10
 
 #request
-#pip install reuests
+#pip install requests
 import requests
 url="https://www.example.com"
 response=requests.get(url)
